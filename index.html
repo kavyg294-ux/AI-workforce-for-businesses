@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Workforce — Business Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0a0f1e; color: #e2e8f0; }
+
+    .glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+    }
+    .glass-dark {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .agent-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .agent-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    .status-completed { background: rgba(16,185,129,0.15); color: #10b981; }
+    .status-completed .status-dot { background: #10b981; animation: pulse 2s infinite; }
+    .status-running { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .status-running .status-dot { background: #3b82f6; animation: blink 1s infinite; }
+    .status-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .status-failed .status-dot { background: #ef4444; }
+    .status-queued { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .status-queued .status-dot { background: #94a3b8; }
+    .status-waiting_approval { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .status-waiting_approval .status-dot { background: #f59e0b; animation: pulse 1s infinite; }
+    .status-planning { background: rgba(168,85,247,0.15); color: #a855f7; }
+    .status-planning .status-dot { background: #a855f7; animation: blink 0.8s infinite; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.7} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideIn { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    .animate-fade { animation: fadeIn 0.4s ease; }
+    .animate-slide { animation: slideIn 0.3s ease; }
+    .spinning { animation: spin 1s linear infinite; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white; border: none; padding: 12px 28px;
+      border-radius: 10px; font-weight: 600; cursor: pointer;
+      transition: all 0.3s; font-size: 14px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139,92,246,0.4); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white; border: none; padding: 8px 18px;
+      border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white; border: none; padding: 8px 18px;
+      border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+    }
+
+    .kpi-card { transition: all 0.3s; }
+    .kpi-card:hover { transform: scale(1.03); }
+
+    .tab-btn { padding: 8px 20px; border-radius: 8px; font-weight: 500; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+    .tab-btn.active { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .tab-btn:not(.active) { color: #64748b; border: 1px solid transparent; }
+    .tab-btn:not(.active):hover { color: #94a3b8; background: rgba(255,255,255,0.03); }
+
+    .activity-item { border-left: 2px solid; padding-left: 12px; margin-bottom: 12px; }
+    .activity-item.success { border-color: #10b981; }
+    .activity-item.error { border-color: #ef4444; }
+    .activity-item.warning { border-color: #f59e0b; }
+    .activity-item.info { border-color: #3b82f6; }
+
+    textarea, input[type="text"], input[type="email"] {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #e2e8f0;
+      padding: 12px 16px;
+      width: 100%;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    textarea:focus, input:focus {
+      outline: none;
+      border-color: rgba(99,102,241,0.5);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+    textarea::placeholder, input::placeholder { color: #475569; }
+
+    .agent-icon { font-size: 28px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    .notification {
+      position: fixed; top: 20px; right: 20px; z-index: 9999;
+      padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500;
+      animation: fadeIn 0.3s ease;
+      max-width: 320px;
+    }
+    .notification.success { background: rgba(16,185,129,0.9); color: white; }
+    .notification.error { background: rgba(239,68,68,0.9); color: white; }
+    .notification.info { background: rgba(59,130,246,0.9); color: white; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<header class="border-b border-white/10 sticky top-0 z-50" style="background:rgba(10,15,30,0.95);backdrop-filter:blur(20px)">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">🤖</div>
+      <div>
+        <h1 class="text-lg font-bold gradient-text">AI Workforce</h1>
+        <p class="text-xs text-slate-500">Autonomous Business Orchestration</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="systemStatus" class="flex items-center gap-2 text-sm">
+        <div class="w-2 h-2 rounded-full bg-emerald-400" style="animation:pulse 2s infinite"></div>
+        <span class="text-slate-400">All Agents Online</span>
+      </div>
+      <div id="approvalBadge" class="hidden">
+        <span class="status-badge status-waiting_approval cursor-pointer" onclick="switchTab('approvals')">
+          <span class="status-dot"></span>
+          <span id="approvalCount">0</span> Pending Approvals
+        </span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Hero Section -->
+  <div class="text-center mb-10 animate-fade">
+    <h2 class="text-4xl font-bold mb-3">
+      <span class="gradient-text">AI Agents Working For You</span>
+    </h2>
+    <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+      Submit a business request and watch your AI workforce plan, execute, and coordinate tasks across CRM, Email, Lead Management, and Analytics — autonomously.
+    </p>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="kpiCards">
+    <div class="glass p-5 kpi-card animate-fade">
+      <div class="text-2xl mb-1">📋</div>
+      <div class="text-3xl font-bold text-blue-400" id="kpiRequests">—</div>
+      <div class="text-xs text-slate-500 mt-1">Business Requests</div>
+    </div>
+    <div class="glass p-5 kpi-card animate-fade">
+      <div class="text-2xl mb-1">⚡</div>
+      <div class="text-3xl font-bold text-violet-400" id="kpiTasks">—</div>
+      <div class="text-xs text-slate-500 mt-1">Tasks Executed</div>
+    </div>
+    <div class="glass p-5 kpi-card animate-fade">
+      <div class="text-2xl mb-1">👥</div>
+      <div class="text-3xl font-bold text-emerald-400" id="kpiContacts">—</div>
+      <div class="text-xs text-slate-500 mt-1">CRM Contacts</div>
+    </div>
+    <div class="glass p-5 kpi-card animate-fade">
+      <div class="text-2xl mb-1">📧</div>
+      <div class="text-3xl font-bold text-pink-400" id="kpiEmails">—</div>
+      <div class="text-xs text-slate-500 mt-1">Emails Sent</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left: Request Panel + Agents -->
+    <div class="lg:col-span-1 space-y-6">
+
+      <!-- Submit Request -->
+      <div class="glass p-6 animate-fade">
+        <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <span>🚀</span> Submit Business Request
+        </h3>
+
+        <!-- Quick Templates -->
+        <div class="mb-4">
+          <p class="text-xs text-slate-500 mb-2">Quick Templates:</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="template-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:border-blue-500/50 hover:text-blue-400 transition-all"
+              data-title="Onboard New Leads from Marketing Campaign"
+              data-desc="We just ran a digital marketing campaign and collected 50 new leads from LinkedIn. Please add them to our CRM, score each lead based on their profile, send personalized introduction emails, and schedule follow-up sequences for the top 10 hot leads.">
+              🎯 Lead Onboarding
+            </button>
+            <button class="template-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:border-violet-500/50 hover:text-violet-400 transition-all"
+              data-title="Q4 Sales Pipeline Review and Follow-ups"
+              data-desc="Run a complete Q4 pipeline review. Analyze all deals in the CRM, identify stalled deals, update deal stages, generate a pipeline report with KPIs, and send personalized follow-up emails to all qualified leads who haven't responded in 2+ weeks.">
+              📊 Q4 Pipeline Review
+            </button>
+            <button class="template-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-all"
+              data-title="Customer Re-engagement Campaign"
+              data-desc="Several customers haven't engaged with us in over 90 days. Identify cold leads in CRM, create a re-engagement email campaign with personalized messages, offer a special discount, and track responses. Flag any customer with >$10k deal value for human review before sending.">
+              🔄 Re-engagement
+            </button>
+            <button class="template-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:border-pink-500/50 hover:text-pink-400 transition-all"
+              data-title="Weekly Business Performance Report"
+              data-desc="Generate a comprehensive weekly business performance report. Include lead funnel metrics, email campaign effectiveness, top performing deals, revenue forecast, and recommend 5 priority actions for next week.">
+              📈 Weekly Report
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <input type="text" id="requestTitle" placeholder="Request title..." maxlength="120">
+          <textarea id="requestDesc" rows="4" placeholder="Describe what you need the AI workforce to do..."></textarea>
+          <button class="btn-primary w-full" id="submitBtn" onclick="submitRequest()">
+            <span id="submitBtnText">🤖 Deploy AI Workforce</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Agent Status Panel -->
+      <div class="glass p-6 animate-fade">
+        <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <span>🤖</span> AI Agent Roster
+        </h3>
+        <div class="space-y-3">
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-blue-400" style="background:rgba(59,130,246,0.1)">🧠</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Orchestrator</div>
+              <div class="text-xs text-slate-500">Plans & coordinates all agents</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-violet-400" style="background:rgba(168,85,247,0.1)">📋</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">CRM Agent</div>
+              <div class="text-xs text-slate-500">Contacts, deals & pipeline</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-pink-400" style="background:rgba(244,114,182,0.1)">📧</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Email Agent</div>
+              <div class="text-xs text-slate-500">Personalized outreach</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-emerald-400" style="background:rgba(16,185,129,0.1)">🎯</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Lead Manager</div>
+              <div class="text-xs text-slate-500">Scoring & segmentation</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-yellow-400" style="background:rgba(234,179,8,0.1)">📊</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Analytics Agent</div>
+              <div class="text-xs text-slate-500">Reports & KPI insights</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+          <div class="agent-card glass-dark p-3 flex items-center gap-3">
+            <div class="agent-icon text-cyan-400" style="background:rgba(6,182,212,0.1)">🔄</div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Follow-up Agent</div>
+              <div class="text-xs text-slate-500">Automated sequences</div>
+            </div>
+            <span class="status-badge status-completed"><span class="status-dot"></span>Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Tabs -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Tab Navigation -->
+      <div class="glass p-2 flex gap-2 flex-wrap">
+        <button class="tab-btn active" onclick="switchTab('requests')" id="tab-requests">📋 Requests</button>
+        <button class="tab-btn" onclick="switchTab('activity')" id="tab-activity">⚡ Live Activity</button>
+        <button class="tab-btn" onclick="switchTab('crm')" id="tab-crm">👥 CRM</button>
+        <button class="tab-btn" onclick="switchTab('emails')" id="tab-emails">📧 Emails</button>
+        <button class="tab-btn" onclick="switchTab('approvals')" id="tab-approvals">🔐 Approvals</button>
+      </div>
+
+      <!-- Tab: Requests -->
+      <div id="panel-requests" class="tab-panel space-y-3">
+        <div id="requestsList">
+          <div class="glass p-8 text-center text-slate-500">
+            <div class="text-4xl mb-3">🚀</div>
+            <p>No requests yet. Submit your first business request!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Activity -->
+      <div id="panel-activity" class="tab-panel hidden">
+        <div class="glass p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white">Live Agent Activity Feed</h3>
+            <div class="flex items-center gap-2 text-xs text-emerald-400">
+              <div class="w-2 h-2 rounded-full bg-emerald-400" style="animation:blink 1s infinite"></div>
+              Auto-refreshing
+            </div>
+          </div>
+          <div id="activityFeed" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <p class="text-slate-500 text-sm text-center py-8">Waiting for agent activity...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: CRM -->
+      <div id="panel-crm" class="tab-panel hidden">
+        <div class="glass p-5">
+          <h3 class="font-semibold text-white mb-4">CRM Contacts</h3>
+          <div id="crmContacts">
+            <p class="text-slate-500 text-sm text-center py-8">Loading contacts...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Emails -->
+      <div id="panel-emails" class="tab-panel hidden">
+        <div class="glass p-5">
+          <h3 class="font-semibold text-white mb-4">Email Activity Log</h3>
+          <div id="emailLog">
+            <p class="text-slate-500 text-sm text-center py-8">Loading emails...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Approvals -->
+      <div id="panel-approvals" class="tab-panel hidden">
+        <div class="glass p-5">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span>🔐</span> Human Approval Queue
+            <span class="text-xs text-slate-500 font-normal">(AI agents pause and wait for your decision)</span>
+          </h3>
+          <div id="approvalsList">
+            <div class="text-center py-8 text-slate-500">
+              <div class="text-4xl mb-3">✅</div>
+              <p>No pending approvals. Agents are running autonomously.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Request Detail Modal -->
+<div id="requestModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.8)">
+  <div class="glass w-full max-w-2xl max-h-screen overflow-y-auto p-6 animate-fade">
+    <div class="flex justify-between items-start mb-5">
+      <h3 class="font-bold text-white text-lg" id="modalTitle">Request Details</h3>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let refreshInterval;
+let activeTab = 'requests';
+
+// ─── API Calls ───────────────────────────────────────────────────────────────
+
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'API error');
+  }
+  return res.json();
+}
+
+// ─── Submit Request ──────────────────────────────────────────────────────────
+
+async function submitRequest() {
+  const title = document.getElementById('requestTitle').value.trim();
+  const desc = document.getElementById('requestDesc').value.trim();
+  if (!title || !desc) return notify('Please fill in both title and description', 'error');
+
+  const btn = document.getElementById('submitBtn');
+  const btnText = document.getElementById('submitBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinning inline-block">⚙️</span> AI Workforce Deploying...';
+
+  try {
+    const result = await api('/api/requests', 'POST', { title, description: desc });
+    notify(`✅ Request deployed! AI agents are working...`, 'success');
+    document.getElementById('requestTitle').value = '';
+    document.getElementById('requestDesc').value = '';
+    switchTab('requests');
+    setTimeout(() => loadRequests(), 1000);
+  } catch (e) {
+    notify(`Error: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.innerHTML = '🤖 Deploy AI Workforce';
+  }
+}
+
+// ─── Load Data ────────────────────────────────────────────────────────────────
+
+async function loadDashboard() {
+  try {
+    const data = await api('/api/dashboard');
+    document.getElementById('kpiRequests').textContent = data.requests.total;
+    document.getElementById('kpiTasks').textContent = data.tasks.completed;
+    document.getElementById('kpiContacts').textContent = data.crm.total_contacts;
+    document.getElementById('kpiEmails').textContent = data.emails.sent;
+
+    if (data.pending_approvals > 0) {
+      document.getElementById('approvalBadge').classList.remove('hidden');
+      document.getElementById('approvalCount').textContent = data.pending_approvals;
+    } else {
+      document.getElementById('approvalBadge').classList.add('hidden');
+    }
+  } catch (e) {}
+}
+
+async function loadRequests() {
+  try {
+    const data = await api('/api/requests');
+    const container = document.getElementById('requestsList');
+    if (!data.requests.length) {
+      container.innerHTML = `<div class="glass p-8 text-center text-slate-500">
+        <div class="text-4xl mb-3">🚀</div><p>No requests yet. Submit your first business request!</p>
+      </div>`;
+      return;
+    }
+    container.innerHTML = data.requests.map(r => `
+      <div class="glass p-5 cursor-pointer hover:border-blue-500/30 transition-all animate-fade" onclick="loadRequestDetail('${r.id}')">
+        <div class="flex justify-between items-start mb-2">
+          <div class="font-semibold text-white text-sm">${escapeHtml(r.title)}</div>
+          ${statusBadge(r.status)}
+        </div>
+        <div class="text-xs text-slate-400 mb-3 line-clamp-2">${escapeHtml(r.description)}</div>
+        <div class="flex items-center justify-between">
+          <div class="text-xs text-slate-500">ID: <code class="text-blue-400">${r.id}</code></div>
+          <div class="text-xs text-slate-500">${timeAgo(r.created_at)}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {}
+}
+
+async function loadActivity() {
+  try {
+    const data = await api('/api/activity?limit=50');
+    const feed = document.getElementById('activityFeed');
+    if (!data.activity.length) {
+      feed.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">Waiting for agent activity...</p>';
+      return;
+    }
+    const agentIcons = { orchestrator:'🧠', crm:'📋', email:'📧', lead:'🎯', analytics:'📊', followup:'🔄' };
+    feed.innerHTML = data.activity.map(log => `
+      <div class="activity-item ${log.status || 'info'} animate-slide">
+        <div class="flex items-start gap-2">
+          <span class="text-base">${agentIcons[log.agent_type] || '🤖'}</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-semibold text-white capitalize">${log.agent_type}</span>
+              <span class="text-xs text-slate-400">${escapeHtml(log.action)}</span>
+            </div>
+            ${log.details ? `<div class="text-xs text-slate-500 mt-0.5 truncate">${escapeHtml(log.details)}</div>` : ''}
+            <div class="text-xs text-slate-600 mt-0.5">${timeAgo(log.created_at)}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {}
+}
+
+async function loadCRM() {
+  try {
+    const data = await api('/api/crm/contacts');
+    const container = document.getElementById('crmContacts');
+    if (!data.contacts.length) {
+      container.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No contacts in CRM</p>';
+      return;
+    }
+    const stageColors = {
+      lead: 'text-slate-400', qualified: 'text-blue-400',
+      proposal: 'text-violet-400', negotiation: 'text-yellow-400',
+      closed_won: 'text-emerald-400', closed_lost: 'text-red-400'
+    };
+    container.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-500 border-b border-white/10">
+              <th class="pb-3 text-left">Contact</th>
+              <th class="pb-3 text-left">Company</th>
+              <th class="pb-3 text-center">Stage</th>
+              <th class="pb-3 text-center">Score</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            ${data.contacts.map(c => `
+              <tr class="hover:bg-white/3 transition-colors">
+                <td class="py-3">
+                  <div class="font-medium text-white">${escapeHtml(c.name)}</div>
+                  <div class="text-xs text-slate-500">${escapeHtml(c.email)}</div>
+                </td>
+                <td class="py-3 text-slate-400 text-xs">${escapeHtml(c.company || '—')}</td>
+                <td class="py-3 text-center">
+                  <span class="text-xs font-medium ${stageColors[c.stage] || 'text-slate-400'} capitalize">${c.stage || 'lead'}</span>
+                </td>
+                <td class="py-3 text-center">
+                  <div class="inline-flex items-center gap-1">
+                    <div class="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div class="h-full rounded-full ${c.lead_score > 70 ? 'bg-emerald-400' : c.lead_score > 40 ? 'bg-yellow-400' : 'bg-red-400'}"
+                           style="width:${c.lead_score}%"></div>
+                    </div>
+                    <span class="text-xs font-bold ${c.lead_score > 70 ? 'text-emerald-400' : c.lead_score > 40 ? 'text-yellow-400' : 'text-red-400'}">${c.lead_score}</span>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {}
+}
+
+async function loadEmails() {
+  try {
+    const data = await api('/api/emails');
+    const container = document.getElementById('emailLog');
+    if (!data.emails.length) {
+      container.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No emails sent yet</p>';
+      return;
+    }
+    const typeColors = {
+      follow_up: 'text-cyan-400', introduction: 'text-blue-400',
+      proposal: 'text-violet-400', newsletter: 'text-pink-400',
+      re_engagement: 'text-yellow-400', general: 'text-slate-400',
+      initial_outreach: 'text-emerald-400', check_in: 'text-teal-400',
+      proposal_nudge: 'text-orange-400', closing: 'text-red-400'
+    };
+    container.innerHTML = `<div class="space-y-3">` + data.emails.map(e => `
+      <div class="glass-dark p-4">
+        <div class="flex justify-between items-start mb-1">
+          <div class="font-medium text-white text-sm">${escapeHtml(e.subject)}</div>
+          <span class="text-xs ${typeColors[e.email_type] || 'text-slate-400'} capitalize">${(e.email_type || 'general').replace('_', ' ')}</span>
+        </div>
+        <div class="text-xs text-slate-400">To: ${escapeHtml(e.to_name || '')} &lt;${escapeHtml(e.to_email)}&gt;</div>
+        <div class="text-xs text-slate-600 mt-2 line-clamp-2">${escapeHtml((e.body || '').substring(0, 150))}...</div>
+        <div class="text-xs text-slate-600 mt-1">${timeAgo(e.sent_at)}</div>
+      </div>
+    `).join('') + `</div>`;
+  } catch (e) {}
+}
+
+async function loadApprovals() {
+  try {
+    const data = await api('/api/approvals');
+    const container = document.getElementById('approvalsList');
+    if (!data.approvals.length) {
+      container.innerHTML = `<div class="text-center py-8 text-slate-500">
+        <div class="text-4xl mb-3">✅</div>
+        <p>No pending approvals. Agents are running autonomously.</p>
+      </div>`;
+      return;
+    }
+    container.innerHTML = data.approvals.map(a => `
+      <div class="glass-dark p-5 mb-3 border border-yellow-500/20 animate-fade">
+        <div class="flex items-start gap-3 mb-3">
+          <div class="text-2xl">⚠️</div>
+          <div class="flex-1">
+            <div class="font-semibold text-yellow-400 text-sm">${escapeHtml(a.title)}</div>
+            <div class="text-xs text-slate-400 mt-1">${escapeHtml(a.description)}</div>
+            ${a.context ? `<div class="text-xs text-slate-500 mt-1">Reason: ${escapeHtml(JSON.parse(a.context || '{}').reason || '')}</div>` : ''}
+            <div class="text-xs text-slate-600 mt-1">Requested ${timeAgo(a.created_at)}</div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-success text-xs flex-1" onclick="decideApproval('${a.id}', 'approve')">✅ Approve & Execute</button>
+          <button class="btn-danger text-xs flex-1" onclick="decideApproval('${a.id}', 'reject')">✗ Reject</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {}
+}
+
+async function decideApproval(approvalId, decision) {
+  try {
+    const result = await api(`/api/approvals/${approvalId}`, 'POST', { decision, reason: '' });
+    notify(decision === 'approve' ? '✅ Task approved! Agent executing...' : '✗ Task rejected', decision === 'approve' ? 'success' : 'info');
+    loadApprovals();
+    loadDashboard();
+  } catch (e) {
+    notify(`Error: ${e.message}`, 'error');
+  }
+}
+
+async function loadRequestDetail(requestId) {
+  try {
+    const data = await api(`/api/requests/${requestId}`);
+    document.getElementById('modalTitle').textContent = data.title;
+
+    const taskHtml = data.tasks.length ? data.tasks.map(t => `
+      <div class="glass-dark p-3 mb-2">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="text-sm font-medium text-white">${escapeHtml(t.title)}</div>
+            <div class="text-xs text-slate-500 mt-1 capitalize">Agent: ${t.agent_type}</div>
+          </div>
+          ${statusBadge(t.status)}
+        </div>
+        ${t.result ? `
+          <div class="mt-2 text-xs text-slate-400">
+            ${formatTaskResult(t.result)}
+          </div>
+        ` : ''}
+        ${t.error ? `<div class="mt-2 text-xs text-red-400">Error: ${escapeHtml(t.error)}</div>` : ''}
+      </div>
+    `).join('') : '<p class="text-slate-500 text-sm">No tasks yet — still planning...</p>';
+
+    document.getElementById('modalContent').innerHTML = `
+      <div class="mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          ${statusBadge(data.status)}
+          <span class="text-xs text-slate-500">${timeAgo(data.created_at)}</span>
+        </div>
+        <p class="text-sm text-slate-400">${escapeHtml(data.description)}</p>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-white mb-3">Task Execution (${data.tasks.length} tasks)</h4>
+        ${taskHtml}
+      </div>
+    `;
+    document.getElementById('requestModal').classList.remove('hidden');
+  } catch (e) {
+    notify(`Error loading request: ${e.message}`, 'error');
+  }
+}
+
+function formatTaskResult(resultStr) {
+  try {
+    const r = JSON.parse(resultStr);
+    const parts = [];
+    if (r.actions_taken) parts.push(`${r.actions_taken} CRM actions`);
+    if (r.emails_sent) parts.push(`${r.emails_sent} emails sent`);
+    if (r.leads_analyzed) parts.push(`${r.leads_analyzed} leads analyzed`);
+    if (r.followups_sent) parts.push(`${r.followups_sent} follow-ups sent`);
+    if (r.summary) parts.push(r.summary);
+    if (r.report?.executive_summary) parts.push(r.report.executive_summary.substring(0, 200));
+    return parts.join(' · ') || 'Completed';
+  } catch { return 'Completed'; }
+}
+
+// ─── Tab Management ───────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.remove('hidden');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  activeTab = tab;
+
+  if (tab === 'requests') loadRequests();
+  else if (tab === 'activity') loadActivity();
+  else if (tab === 'crm') loadCRM();
+  else if (tab === 'emails') loadEmails();
+  else if (tab === 'approvals') loadApprovals();
+}
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.template-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('requestTitle').value = btn.dataset.title;
+    document.getElementById('requestDesc').value = btn.dataset.desc;
+    document.getElementById('requestTitle').focus();
+  });
+});
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+function statusBadge(status) {
+  const labels = {
+    completed: '✓ Completed', running: '⚡ Running', failed: '✗ Failed',
+    queued: '• Queued', waiting_approval: '⚠ Awaiting Approval',
+    planning: '🧠 Planning', executing: '⚡ Executing', pending: '• Pending'
+  };
+  return `<span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status] || status}</span>`;
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + (dateStr.endsWith('Z') ? '' : 'Z'));
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function closeModal() {
+  document.getElementById('requestModal').classList.add('hidden');
+}
+
+function notify(msg, type = 'info') {
+  const n = document.createElement('div');
+  n.className = `notification ${type}`;
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 4000);
+}
+
+// ─── Auto-refresh ─────────────────────────────────────────────────────────────
+
+function startAutoRefresh() {
+  loadDashboard();
+  loadRequests();
+
+  setInterval(() => {
+    loadDashboard();
+    if (activeTab === 'requests') loadRequests();
+    else if (activeTab === 'activity') loadActivity();
+    else if (activeTab === 'crm') loadCRM();
+    else if (activeTab === 'emails') loadEmails();
+    else if (activeTab === 'approvals') loadApprovals();
+  }, 3000); // refresh every 3 seconds
+}
+
+// Close modal on backdrop click
+document.getElementById('requestModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Initialize
+startAutoRefresh();
+</script>
+</body>
+</html>
